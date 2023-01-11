@@ -1,0 +1,94 @@
+from tkinter import *
+from tkinter import ttk
+from PIL import Image,ImageTk
+from tkinter import messagebox
+import mysql.connector
+import cv2
+import os
+import numpy as np
+
+class facedetect:
+    def __init__(self,root):
+        self.root = root
+        self.root.geometry("400x400")
+        self.root.title("FACE DETECT")
+
+        img = Image.open(r"C:\Users\anshu\OneDrive\Desktop\face recognition\face recognition\facedetect.png")
+        img = img.resize((400, 400), Image.ANTIALIAS)
+        self.back_img = ImageTk.PhotoImage(img)
+
+        bg_lbl = Label(self.root, image=self.back_img)
+        bg_lbl.place(x=0, y=0, width=400, height=400)
+
+        detect_button = Button(bg_lbl, text="DETECT FACE",bg ="blue",fg ="white",command=self.face_recog)
+        detect_button.place(x=150, y=315, width=100, height=25)
+
+    def face_recog(self):
+        def draw_boundary(img,classifier,scaleFactor,minNeighbours,color,text,clf):
+            gray_image=cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+            features = classifier.detectMultiScale(gray_image,scaleFactor,minNeighbours)
+
+            coord=[]
+
+            for (x,y,w,h) in features:
+                cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),3)
+                ids,predict=clf.predict(gray_image[y:y+h,x:x+w])
+                confidence = int((100*(1-predict/300)))
+
+                conn = mysql.connector.connect(host="localhost", username="root", password="Vaibhav1#",database="face_recognizer")
+                my_cursor = conn.cursor()
+
+                my_cursor.execute("Select name from student where studentId=" + str(id))
+                n = my_cursor.fetchone()
+                n = "+".join(n)
+
+                my_cursor.execute("Select rollno from student where studentId=" + str(id))
+                r = my_cursor.fetchone()
+                r = "+".join(r)
+
+
+
+                if confidence>77:
+                    cv2.putText(img,f"Roll:{r}",(x,y-55),cv2.FONT_HERSHEY_COMPLEX,0.8,(255,255,255),3)
+                    cv2.putText(img, f"NAME:{n}", (x, y - 30), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 255, 255), 3)
+                else:
+                    cv2.rectangle(img,(x, y), (x + w, y + h), (0, 0, 255), 3)
+                    cv2.putText(img, "Unknown Face", (x, y - 30), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 255, 255), 3)
+
+                coord=[x,y,w,y]
+  
+            return coord
+
+        def recognized(img,clf,faceCascade):
+            coord= draw_boundary(img,faceCascade,1.1,10,(255,25,255),"Face",clf)
+            return img
+
+        faceCascade=cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
+        clf=cv2.face.LBPHFaceRecognizer_create()
+        clf.read(r"classifier.xml")
+
+        video_cap=cv2.VideoCapture(0)
+
+        while True:
+            ret,img=video_cap.read()
+            img=recognized(img,clf,faceCascade)
+            cv2.imshow("welcome to face Recognition",img)
+
+            if cv2.waitKey(1)==13:
+                break
+        video_cap.release()
+        cv2.destroyAllWindows()
+
+
+
+
+
+
+
+
+
+
+if __name__ == '__main__':
+    root = Tk()
+    obj = facedetect(root)
+    root.mainloop()
